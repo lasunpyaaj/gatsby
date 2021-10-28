@@ -34,7 +34,7 @@ function createProxyHandler(prefix, options): ProxyHandler<any> {
     set: function (target, key, value): boolean {
       const path = key && key.toString ? `${prefix}.${key.toString()}` : prefix
 
-      if (options?.ignore?.includes(path)) {
+      if (options?.ignore?.some(ignored => path.startsWith(ignored))) {
         target[key] = value
         return true
       }
@@ -43,17 +43,17 @@ function createProxyHandler(prefix, options): ProxyHandler<any> {
         `Mutating nodes is a no no, please use createNode, createNodeField and/or createParentChildLink`
       )
 
-      if (process.env.GATSBY_DIAGNOSTICS) {
-        if (!error.stack) {
-          throw new Error(`No stack!`)
-        } else if (!reported.has(error.stack)) {
-          reporter.error(error)
-          reported.add(error.stack)
-        }
-        return true
+      if (process.env.GATSBY_NODE_MUTATION_THROW) {
+        throw error
       }
 
-      throw error
+      if (!error.stack) {
+        throw new Error(`No stack!`)
+      } else if (!reported.has(error.stack)) {
+        reporter.error(error)
+        reported.add(error.stack)
+      }
+      return true
     },
   }
 }
@@ -62,7 +62,12 @@ export function wrapNode(node: IGatsbyNode): IGatsbyNode {
   return new Proxy(
     node,
     createProxyHandler(node.internal.type, {
-      ignore: [`${node.internal.type}.__gatsby_resolved`],
+      ignore: [
+        `${node.internal.type}.__gatsby_resolved`,
+        `${node.internal.type}.internal.fieldOwners`,
+        `${node.internal.type}.fields`,
+        `${node.internal.type}.children`,
+      ],
     })
   )
 }
