@@ -1,4 +1,7 @@
 import type { IGatsbyNode } from "../redux/types"
+import reporter from "gatsby-cli/lib/reporter"
+
+const reported = new Set<string>()
 
 function createProxyHandler(prefix, options): ProxyHandler<any> {
   return {
@@ -36,9 +39,21 @@ function createProxyHandler(prefix, options): ProxyHandler<any> {
         return true
       }
 
-      throw new Error(
+      const error = new Error(
         `Mutating nodes is a no no, please use createNode, createNodeField and/or createParentChildLink`
       )
+
+      if (process.env.GATSBY_DIAGNOSTICS) {
+        if (!error.stack) {
+          throw new Error(`No stack!`)
+        } else if (!reported.has(error.stack)) {
+          reporter.error(error)
+          reported.add(error.stack)
+        }
+        return true
+      }
+
+      throw error
     },
   }
 }
