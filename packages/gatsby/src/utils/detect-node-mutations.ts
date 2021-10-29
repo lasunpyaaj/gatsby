@@ -58,16 +58,26 @@ function createProxyHandler(prefix, options): ProxyHandler<any> {
   }
 }
 
+const shouldWrap = process.env.GATSBY_DIAGNOSTICS
+if (!process.env.GATSBY_WORKER_MODULE_PATH) {
+  console.log(`NODE MUTATION DETECTION: ${shouldWrap ? `ENABLED` : `DISABLED`}`)
+}
+
 export function wrapNode(node: IGatsbyNode): IGatsbyNode {
-  return new Proxy(
-    node,
-    createProxyHandler(node.internal.type, {
-      ignore: [
-        `${node.internal.type}.__gatsby_resolved`,
-        `${node.internal.type}.internal.fieldOwners`,
-        `${node.internal.type}.fields`,
-        `${node.internal.type}.children`,
-      ],
-    })
-  )
+  if (shouldWrap) {
+    return new Proxy(
+      node,
+      createProxyHandler(node.internal.type, {
+        ignore: [
+          `${node.internal.type}.__gatsby_resolved`,
+          `${node.internal.type}.internal.fieldOwners`,
+          `${node.internal.type}.internal.content`,
+          `${node.internal.type}.fields`,
+          `${node.internal.type}.children`,
+        ],
+      })
+    )
+  } else {
+    return node
+  }
 }
