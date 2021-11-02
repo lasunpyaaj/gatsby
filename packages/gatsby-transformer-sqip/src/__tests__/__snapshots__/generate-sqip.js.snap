@@ -2,22 +2,33 @@
 
 exports[`gatsby-transformer-sqip generateSqip cached 1`] = `
 Object {
-  "dataURI": "data:image/svg+xml,%3csvg%3e%3c!-- Cached SQIP SVG --%3e%3c/svg%3e",
-  "svg": "<svg><!-- Cached SQIP SVG --></svg>",
+  "content": "<svg><!-- Cached SVG --></svg>",
+  "metadata": Object {
+    "dataURI": "data:image/svg+xml,dataURI",
+  },
 }
 `;
 
 exports[`gatsby-transformer-sqip generateSqip not cached 1`] = `
 Object {
-  "dataURI": "data:image/svg+xml,%3csvg%3e%3c!-- Mocked SQIP SVG --%3e%3c/svg%3e",
-  "svg": "<svg><!-- Mocked SQIP SVG --></svg>",
+  "content": "<svg><!-- Mocked SQIP SVG --></svg>",
+  "dataURI": "data:image/svg+xml,dataURI",
+  "metadata": Object {},
 }
 `;
 
 exports[`gatsby-transformer-sqip generateSqip not cached 2`] = `
 Object {
-  "blur": 0,
-  "mode": 3,
-  "numberOfPrimitives": 5,
+  "plugins": Array [
+    Object {
+      "name": "sqip-plugin-primitive",
+      "options": Object {
+        "mode": 3,
+        "numberOfPrimitives": 5,
+      },
+    },
+    "sqip-plugin-data-uri",
+    "sqip-plugin-svgo",
+  ],
 }
 `;
