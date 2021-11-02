@@ -22,6 +22,7 @@ import {
 } from "../datastore"
 import { GatsbyIterable, isIterable } from "../datastore/common/iterable"
 import { reportOnce } from "../utils/report-once"
+import { wrapNode } from "../utils/detect-node-mutations"
 
 type TypeOrTypeName = string | GraphQLOutputType
 
@@ -146,10 +147,11 @@ class LocalNodeModel {
     }
 
     if (result) {
-      this.trackInlineObjectsInRootNode(node)
+      this.trackInlineObjectsInRootNode(result)
+      this.trackPageDependencies(result, pageDependencies)
     }
 
-    return this.trackPageDependencies(result, pageDependencies)
+    return result ? wrapNode(result) : null
   }
 
   /**
@@ -178,9 +180,10 @@ class LocalNodeModel {
 
     if (result) {
       result.forEach(node => this.trackInlineObjectsInRootNode(node))
+      this.trackPageDependencies(result, pageDependencies)
     }
 
-    return this.trackPageDependencies(result, pageDependencies)
+    return result.map(wrapNode)
   }
 
   /**
@@ -214,14 +217,16 @@ class LocalNodeModel {
 
     if (result) {
       result.forEach(node => this.trackInlineObjectsInRootNode(node))
+
+      if (typeof pageDependencies.connectionType === `undefined`) {
+        pageDependencies.connectionType =
+          typeof type === `string` ? type : type.name
+      }
+
+      this.trackPageDependencies(result, pageDependencies)
     }
 
-    if (typeof pageDependencies.connectionType === `undefined`) {
-      pageDependencies.connectionType =
-        typeof type === `string` ? type : type.name
-    }
-
-    return this.trackPageDependencies(result, pageDependencies)
+    return result.map(wrapNode)
   }
 
   /**
@@ -346,7 +351,10 @@ class LocalNodeModel {
       pageDependencies.connectionType = gqlType.name
     }
     this.trackPageDependencies(result.entries, pageDependencies)
-    return result
+    return {
+      entries: result.entries.map(wrapNode),
+      totalCount: result.totalCount,
+    }
   }
 
   /**
@@ -383,7 +391,8 @@ class LocalNodeModel {
       //  the query whenever any node of this type changes.
       pageDependencies.connectionType = gqlType.name
     }
-    return this.trackPageDependencies(first, pageDependencies)
+    this.trackPageDependencies(first, pageDependencies)
+    return first ? wrapNode(first) : null
   }
 
   prepareNodes(type, queryFields, fieldsToResolve) {

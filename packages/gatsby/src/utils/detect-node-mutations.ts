@@ -3,14 +3,75 @@ import reporter from "gatsby-cli/lib/reporter"
 
 const reported = new Set<string>()
 
-function createProxyHandler(prefix, options): ProxyHandler<any> {
+const genericProxy = createProxyHandler()
+const nodeInternalProxy = createProxyHandler({
+  onGet(key, value) {
+    if (key === `fieldOwners` || key === `content`) {
+      // all allowed in here
+      return value
+    }
+    return undefined
+  },
+  onSet(target, key, value) {
+    if (key === `fieldOwners` || key === `content`) {
+      target[key] = value
+      return true
+    }
+    return undefined
+  },
+})
+
+const nodeProxy = createProxyHandler({
+  onGet(key, value) {
+    if (key === `internal`) {
+      return memoizedProxy(value, nodeInternalProxy)
+    } else if (
+      key === `__gatsby_resolved` ||
+      key === `fields` ||
+      key === `children`
+    ) {
+      // all allowed in here
+      return value
+    }
+    return undefined
+  },
+  onSet(target, key, value) {
+    if (key === `__gatsby_resolved` || key === `fields` || key === `children`) {
+      target[key] = value
+      return true
+    }
+    return undefined
+  },
+})
+
+const referenceMap = new WeakMap<any, any>()
+function memoizedProxy(target, handler): any {
+  const alreadyWrapped = referenceMap.get(target)
+  if (alreadyWrapped) {
+    return alreadyWrapped
+  } else {
+    const wrapped = new Proxy(target, handler)
+    referenceMap.set(target, wrapped)
+    return wrapped
+  }
+}
+
+function createProxyHandler({
+  onGet,
+  onSet,
+}: {
+  onGet?: (key: string | symbol, value: any) => any
+  onSet?: (target: any, key: string | symbol, value: any) => boolean | undefined
+} = {}): ProxyHandler<any> {
   return {
     get: function (target, key): any {
       const value = target[key]
-      const path = key && key.toString ? `${prefix}.${key.toString()}` : prefix
 
-      if (options?.ignore?.includes(path)) {
-        return value
+      if (onGet) {
+        const result = onGet(key, value)
+        if (result !== undefined) {
+          return result
+        }
       }
 
       const fieldDescriptor = Object.getOwnPropertyDescriptor(target, key)
@@ -26,17 +87,17 @@ function createProxyHandler(prefix, options): ProxyHandler<any> {
       }
 
       if (typeof value === `object` && value !== null) {
-        return new Proxy(value, createProxyHandler(path, options))
+        return memoizedProxy(value, genericProxy)
       }
 
       return value
     },
     set: function (target, key, value): boolean {
-      const path = key && key.toString ? `${prefix}.${key.toString()}` : prefix
-
-      if (options?.ignore?.some(ignored => path.startsWith(ignored))) {
-        target[key] = value
-        return true
+      if (onSet) {
+        const result = onSet(target, key, value)
+        if (result !== undefined) {
+          return result
+        }
       }
 
       const error = new Error(
@@ -60,23 +121,14 @@ function createProxyHandler(prefix, options): ProxyHandler<any> {
 
 const shouldWrap = process.env.GATSBY_DIAGNOSTICS
 if (!process.env.GATSBY_WORKER_MODULE_PATH) {
-  console.log(`NODE MUTATION DETECTION: ${shouldWrap ? `ENABLED` : `DISABLED`}`)
+  console.log(
+    `NODE MUTATION DETECTION1: ${shouldWrap ? `ENABLED` : `DISABLED`}`
+  )
 }
 
 export function wrapNode(node: IGatsbyNode): IGatsbyNode {
   if (shouldWrap) {
-    return new Proxy(
-      node,
-      createProxyHandler(node.internal.type, {
-        ignore: [
-          `${node.internal.type}.__gatsby_resolved`,
-          `${node.internal.type}.internal.fieldOwners`,
-          `${node.internal.type}.internal.content`,
-          `${node.internal.type}.fields`,
-          `${node.internal.type}.children`,
-        ],
-      })
-    )
+    return memoizedProxy(node, nodeProxy)
   } else {
     return node
   }

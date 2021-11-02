@@ -30,6 +30,7 @@ const { requireGatsbyPlugin } = require(`./require-gatsby-plugin`)
 const { getNonGatsbyCodeFrameFormatted } = require(`./stack-trace-utils`)
 const { trackBuildError, decorateEvent } = require(`gatsby-telemetry`)
 import errorParser from "./api-runner-error-parser"
+import { wrapNode } from "./detect-node-mutations"
 
 if (!process.env.BLUEBIRD_DEBUG && !process.env.BLUEBIRD_LONG_STACK_TRACES) {
   // Unless specified - disable longStackTraces
@@ -38,6 +39,29 @@ if (!process.env.BLUEBIRD_DEBUG && !process.env.BLUEBIRD_LONG_STACK_TRACES) {
   // which cause bluebird to enable longStackTraces
   // `gatsby build` (with NODE_ENV=production) already doesn't enable longStackTraces
   Promise.config({ longStackTraces: false })
+}
+
+const nodeMutationsWrappers = {
+  getNode(id) {
+    const node = getNode(id)
+    if (node) {
+      return wrapNode(node)
+    }
+    return undefined
+  },
+  getNodes() {
+    return getNodes().map(wrapNode)
+  },
+  getNodesByType(type) {
+    return getNodesByType(type).map(wrapNode)
+  },
+  getNodeAndSavePathDependency(id) {
+    const node = getNodeAndSavePathDependency(id)
+    if (node) {
+      return wrapNode(node)
+    }
+    return undefined
+  },
 }
 
 // Bind action creators per plugin so we can auto-add
@@ -372,6 +396,14 @@ const runAPI = async (plugin, api, args, activity) => {
       runningActivities.forEach(activity => activity.end())
     }
 
+    const shouldDetectNodeMutations = [
+      `sourceNodes`,
+      `onCreateNode`,
+      `createResolvers`,
+      `createSchemaCustomization`,
+      `setFieldsOnGraphQLNodeType`,
+    ].includes(api)
+
     const apiCallArgs = [
       {
         ...args,
@@ -383,11 +415,19 @@ const runAPI = async (plugin, api, args, activity) => {
         store,
         emitter,
         getCache,
-        getNodes,
-        getNode,
-        getNodesByType,
+        getNodes: shouldDetectNodeMutations
+          ? nodeMutationsWrappers.getNodes
+          : getNodes,
+        getNode: shouldDetectNodeMutations
+          ? nodeMutationsWrappers.getNode
+          : getNode,
+        getNodesByType: shouldDetectNodeMutations
+          ? nodeMutationsWrappers.getNodesByType
+          : getNodesByType,
         reporter: extendedLocalReporter,
-        getNodeAndSavePathDependency,
+        getNodeAndSavePathDependency: shouldDetectNodeMutations
+          ? nodeMutationsWrappers.getNodeAndSavePathDependency
+          : getNodeAndSavePathDependency,
         cache,
         createNodeId: namespacedCreateNodeId,
         createContentDigest,

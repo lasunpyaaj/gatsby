@@ -11,7 +11,6 @@ import {
   IRunFilterArg,
   runFastFiltersAndSort,
 } from "../in-memory/run-fast-filters"
-import { wrapNode } from "../../utils/detect-node-mutations"
 
 const lmdbDatastore = {
   getNode,
@@ -147,8 +146,7 @@ function getNode(id: string): IGatsbyNode | undefined {
 
   const { nodes } = getDatabases()
 
-  const node = nodes.get(id)
-  return node ? wrapNode(node) : undefined
+  return nodes.get(id)
 }
 
 function getTypes(): Array<string> {
