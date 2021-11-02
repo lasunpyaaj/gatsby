@@ -682,3 +682,8 @@ blockquote p {
   /* Hate me or not, Comic Sans is a great fit here */
   font-family: "Comic Sans MS", cursive, sans-serif;
 }
+
+/* This seems to be a bug in gatsby-plugin-image. The placeholder should behave the same as the actual image */
+img[data-placeholder-image] {
+  object-fit: cover;
+}

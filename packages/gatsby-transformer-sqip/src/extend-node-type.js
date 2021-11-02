@@ -10,6 +10,7 @@ const {
   GraphQLString,
   GraphQLInt,
   GraphQLBoolean,
+  GraphQLJSON,
 } = require(`gatsby/graphql`)
 const { queueImageResizing } = require(`gatsby-plugin-sharp`)
 const { fetchRemoteFile } = require(`gatsby-core-utils`)
@@ -55,8 +56,9 @@ async function sqipSharp({ type, cache, getNodeAndSavePathDependency, store }) {
       type: new GraphQLObjectType({
         name: `SqipSharp`,
         fields: {
-          svg: { type: GraphQLString },
+          content: { type: GraphQLString },
           dataURI: { type: GraphQLString },
+          metadata: { type: GraphQLJSON },
         },
       }),
       args: {
