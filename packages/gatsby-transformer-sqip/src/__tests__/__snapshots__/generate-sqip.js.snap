@@ -2,18 +2,19 @@
 
 exports[`gatsby-transformer-sqip generateSqip cached 1`] = `
 Object {
-  "content": "<svg><!-- Cached SVG --></svg>",
   "metadata": Object {
+    "anyOther": "metadata-value",
     "dataURI": "data:image/svg+xml,dataURI",
   },
+  "svg": "<svg><!-- Cached SVG --></svg>",
 }
 `;
 
 exports[`gatsby-transformer-sqip generateSqip not cached 1`] = `
 Object {
-  "content": "<svg><!-- Mocked SQIP SVG --></svg>",
   "dataURI": "data:image/svg+xml,dataURI",
   "metadata": Object {},
+  "svg": "<svg><!-- Mocked SQIP SVG --></svg>",
 }
 `;
 

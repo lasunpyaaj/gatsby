@@ -23,9 +23,10 @@ jest.mock(`fs-extra`, () => {
     exists: jest.fn(() => false),
     readFile: jest.fn(() =>
       JSON.stringify({
-        content: `<svg><!-- Cached SVG --></svg>`,
+        svg: `<svg><!-- Cached SVG --></svg>`,
         metadata: {
           dataURI: `data:image/svg+xml,dataURI`,
+          anyOther: `metadata-value`,
         },
       })
     ),

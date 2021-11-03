@@ -89,7 +89,7 @@ module.exports = async function generateSqip(options) {
           const { dataURI, ...metadata } = result.metadata
 
           svg = {
-            content: result.content.toString(),
+            svg: result.content.toString(),
             dataURI,
             metadata: metadata,
           }
