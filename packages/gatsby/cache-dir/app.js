@@ -174,7 +174,7 @@ apiRunnerAsync(`onClientEntry`).then(() => {
   Promise.all([
     loader.loadPage(`/dev-404-page/`),
     loader.loadPage(`/404.html`),
-    loader.loadPage(window.location.pathname),
+    loader.loadPage(window.location.pathname + window.location.search),
   ]).then(() => {
     navigationInit()
 
@@ -194,7 +194,7 @@ apiRunnerAsync(`onClientEntry`).then(() => {
         document.body.append(indicatorMountElement)
 
         if (renderer === ReactDOM.hydrateRoot) {
-          renderer(indicatorMountElement).render(
+          ReactDOM.createRoot(indicatorMountElement).render(
             <LoadingIndicatorEventHandler />
           )
         } else {

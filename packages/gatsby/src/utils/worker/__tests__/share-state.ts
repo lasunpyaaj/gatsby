@@ -2,16 +2,25 @@ import { createTestWorker, GatsbyTestWorkerPool } from "./test-helpers"
 import {
   store,
   saveState,
-  saveStateForWorkers,
-  loadStateInWorker,
+  savePartialStateToDisk,
+  loadPartialStateFromDisk,
 } from "../../../redux"
 import { GatsbyStateKeys } from "../../../redux/types"
+
+jest.mock(`gatsby-telemetry`, () => {
+  return {
+    decorateEvent: jest.fn(),
+    trackError: jest.fn(),
+    trackCli: jest.fn(),
+  }
+})
 
 let worker: GatsbyTestWorkerPool | undefined
 
 const dummyPagePayload = {
   path: `/foo/`,
   component: `/foo`,
+  componentPath: `/foo`,
 }
 
 describe(`worker (share-state)`, () => {
@@ -81,8 +90,8 @@ describe(`worker (share-state)`, () => {
       `staticQueryComponents`,
     ]
 
-    saveStateForWorkers(slicesOne)
-    const resultOne = loadStateInWorker(slicesOne)
+    savePartialStateToDisk(slicesOne)
+    const resultOne = loadPartialStateFromDisk(slicesOne)
 
     expect(resultOne).toMatchInlineSnapshot(`
       Object {
@@ -90,19 +99,21 @@ describe(`worker (share-state)`, () => {
           "/foo" => Object {
             "componentChunkName": undefined,
             "componentPath": "/foo",
+            "config": false,
             "isInBootstrap": true,
             "pages": Set {
               "/foo/",
             },
             "query": "",
+            "serverData": false,
           },
         },
       }
     `)
 
-    saveStateForWorkers(slicesTwo)
+    savePartialStateToDisk(slicesTwo)
 
-    const resultTwo = loadStateInWorker(slicesTwo)
+    const resultTwo = loadPartialStateFromDisk(slicesTwo)
 
     expect(resultTwo).toMatchInlineSnapshot(`
       Object {
@@ -110,11 +121,13 @@ describe(`worker (share-state)`, () => {
           "/foo" => Object {
             "componentChunkName": undefined,
             "componentPath": "/foo",
+            "config": false,
             "isInBootstrap": true,
             "pages": Set {
               "/foo/",
             },
             "query": "",
+            "serverData": false,
           },
         },
         "staticQueryComponents": Map {
@@ -141,8 +154,8 @@ describe(`worker (share-state)`, () => {
 
     const slices: Array<GatsbyStateKeys> = []
 
-    saveStateForWorkers(slices)
-    const result = loadStateInWorker(slices)
+    savePartialStateToDisk(slices)
+    const result = loadPartialStateFromDisk(slices)
 
     expect(result).toEqual({})
   })
@@ -158,8 +171,8 @@ describe(`worker (share-state)`, () => {
 
     const slices: Array<GatsbyStateKeys> = [`staticQueryComponents`]
 
-    saveStateForWorkers(slices)
-    const result = loadStateInWorker(slices)
+    savePartialStateToDisk(slices)
+    const result = loadPartialStateFromDisk(slices)
 
     expect(result).toMatchInlineSnapshot(`
       Object {
@@ -206,9 +219,9 @@ describe(`worker (share-state)`, () => {
       },
     })
 
-    saveStateForWorkers([`components`, `staticQueryComponents`])
+    savePartialStateToDisk([`components`, `staticQueryComponents`])
 
-    await Promise.all(worker.all.setQueries())
+    await Promise.all(worker.all.setComponents())
 
     const components = await worker.single.getComponent(
       dummyPagePayload.component
@@ -220,9 +233,11 @@ describe(`worker (share-state)`, () => {
     expect(components).toMatchInlineSnapshot(`
       Object {
         "componentPath": "/foo",
+        "config": false,
         "isInBootstrap": true,
         "pages": Object {},
         "query": "I'm a page query",
+        "serverData": false,
       }
     `)
 
@@ -256,7 +271,7 @@ describe(`worker (share-state)`, () => {
       },
     })
 
-    saveStateForWorkers([`inferenceMetadata`])
+    savePartialStateToDisk([`inferenceMetadata`])
 
     await Promise.all(worker.all.setInferenceMetadata())
 

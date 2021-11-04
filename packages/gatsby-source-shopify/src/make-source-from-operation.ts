@@ -20,7 +20,9 @@ export function makeSourceFromOperation(
 ) {
   return async function sourceFromOperation(
     op: IShopifyBulkOperation,
-    isPriorityBuild = process.env.IS_PRODUCTION_BRANCH === `true`
+    // A build on the main branch && a production build
+    isPriorityBuild = process.env.GATSBY_IS_PR_BUILD !== `true` &&
+      process.env.GATSBY_IS_PREVIEW !== `true`
   ): Promise<void> {
     const { reporter, actions } = gatsbyApi
 
@@ -171,7 +173,7 @@ export function makeSourceFromOperation(
         context: {
           sourceMessage: `Could not source from bulk operation`,
         },
-        error: e,
+        error: e as Error,
       })
     }
   }
